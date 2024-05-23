@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Новая заявка</title>
+</head>
+<body>
+<div class="page">
+    <div class="error active" id="error" onclick="toggleError('Неправильынй пароль')"></div>
+    <div class="form">
+        <label for="name">
+            Услуга:
+            <input type="text" name="name" id="name">
+        </label>
+        <label for="desc">
+            Описание
+            <input type="text" name="desc" id="desc">
+        </label>
+        <label for="date">
+            Время (8:00-18:00)
+            <input type="datetime-local" id="dt">
+        </label>
+        <button class="primary" onclick="send()">Отправить</button>
+    </div>
+</div>
+</body>
+
+<script>
+
+    if (!localStorage.getItem("role")) {
+        location.href = "/auth"
+    }
+
+    const toggleError = (text) => {
+        let error = document.getElementById("error")
+        error.classList.toggle("view")
+        error.innerText = text
+        error.classList.remove("active")
+        setTimeout(() => {
+            error.classList.remove("active")
+        }, 10)
+        error.classList.toggle("active")
+        setTimeout(() => {
+            error.innerText = ""
+            error.classList.remove("view")
+        }, 1000)
+    }
+
+    const send = () => {
+
+        let name = document.getElementById("name").value
+        let desc = document.getElementById("desc").value
+
+        let rowDt = document.getElementById("dt").value
+        let newDt = rowDt.replaceAll("T", " ")
+        let time = newDt.split(" ")[1].split(":")
+        console.log(rowDt, newDt, time)
+        if (time[0] < 8 || time[0] > 18) {
+            toggleError("Необходимо выбрать рабочее время (8:00 - 18:00)")
+        } else if (!name || !desc || !rowDt) {
+            toggleError("Необходимо заполнить все поля")
+        } else {
+            fetch("api/data/new", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: desc,
+                    date: newDt
+                })
+            }).then(resp => {location.href = "/"})
+        }
+    }
+
+</script>
+
+<style>
+    * {
+        font-family: sans-serif;
+    }
+
+    html, body {
+        background-color: #e7e7e7;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+    }
+
+    .form {
+        display: flex;
+        flex-direction: column;
+        width: 400px;
+        gap: 10px;
+        background-color: white;
+        padding: 40px;
+        border-radius: 20px;
+    }
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+    }
+
+    .error {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0;
+        background-color: white;
+        border-radius: 10px;
+    }
+
+    .error.view {
+        padding: 15px;
+    }
+
+    .error:after {
+        content: " ";
+        display: block;
+        background-color: red;
+        width: 0;
+        height: 2px;
+        transition: width 1s ease-in-out;
+    }
+
+    .error.active:after {
+        width: calc(100% - 10px);
+        transform: translateX(5px);
+        transition: width 0s ease-in-out;
+    }
+
+    button.primary {
+        all: unset;
+        background: royalblue;
+        color: white;
+        transition: .1s ease-in-out;
+        width: fit-content;
+        padding: 5px 15px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+</style>
+</html>

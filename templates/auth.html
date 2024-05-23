@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Вход</title>
+</head>
+<body>
+<div class="page">
+    <div class="error active" id="error" onclick="toggleError('Неправильынй пароль')"></div>
+    <div class="login" id="login">
+        <h2>Вход</h2>
+        <label for="email">
+            <span>Электронаня почта:</span>
+            <input type="email" name="email" id="email_l">
+        </label>
+
+        <label for="password">
+            <span>Пароль:</span>
+            <input type="password" id="password_l"/>
+        </label>
+
+        <div class="btn_group">
+            <button class="primary" onclick="login()">Войти</button>
+            <button class="link" onclick="changeView()" id="toReg">Хочу создать аккаунт</button>
+        </div>
+    </div>
+
+
+    <div class="empty"></div>
+
+
+    <div class="register hidden" id="register">
+        <h2>Регистрация</h2>
+        <label for="fullname">
+            <span>ФИО:</span>
+            <input id="name_r"/>
+        </label>
+
+        <label for="email">
+            <span>Электронаня почта:</span>
+            <input type="email" name="email" id="email_r">
+        </label>
+
+        <label for="tel">
+            <span>Номер телефона:</span>
+            <input type="tel" name="tel" id="tel_r">
+        </label>
+
+        <label for="password">
+            <span>Пароль:</span>
+            <input type="password" id="password_r"/>
+        </label>
+
+        <div class="btn_group">
+            <button class="primary" onclick="register()">Зарегестрироваться</button>
+            <button class="link" onclick="changeView()" id="toLog">Войти с существующего аакаунта</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let state = true
+
+    const toggleError = (text) => {
+        let error = document.getElementById("error")
+        error.classList.toggle("view")
+        error.innerText = text
+        error.classList.remove("active")
+        setTimeout(() => {
+            error.classList.remove("active")
+        }, 10)
+        error.classList.toggle("active")
+        setTimeout(() => {
+            error.innerText = ""
+            error.classList.remove("view")
+        }, 1000)
+    }
+
+    const changeView = () => {
+        document.getElementById("login").classList.toggle("hidden")
+        document.getElementById("register").classList.toggle("hidden")
+    }
+
+    const register = () => {
+        let name = document.getElementById("name_r").value
+        let email = document.getElementById("email_r").value
+        let password = document.getElementById("password_r").value
+        let tel = document.getElementById("tel_r").value
+
+        if (name && email && password && tel) {
+            if (email.includes("@") && email.includes(".")) {
+                fetch("api/register", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        password: password,
+                        tel: tel
+                    })
+                }).then(resp => {
+                    if (resp.status === 201) {
+                        location.href = "/"
+                        resp.json().then(body => {
+                            localStorage.setItem("role", body.role)
+                        })
+                    } else {
+                        toggleError("Профиль с таким телефоном/почтой/именем уже существует")
+                    }
+                })
+            } else {
+                toggleError("Неверно введена электронная почта")
+            }
+        }
+    }
+
+    const login = () => {
+        let email = document.getElementById("email_l").value
+        let password = document.getElementById("password_l").value
+
+        if (email && password) {
+            if (email.includes("@") && email.includes(".")) {
+                fetch("/api/login", {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                    })
+                }).then(resp => {
+                    if (resp.status === 200) {
+                        location.href = "/"
+                        resp.json().then(body => {
+                            localStorage.setItem("role", body.role)
+                        })
+                    } else if (resp.status === 204) {
+                        toggleError("Такого аккаунта не существует")
+                    } else if (resp.status === 401) {
+                        toggleError("Пароль не верен")
+                    }
+                })
+            } else {
+                toggleError("Неверно введена электронная почта")
+            }
+        }
+    }
+</script>
+</body>
+
+<style>
+    html, body {
+        background-color: #e7e7e7;
+        margin: 0;
+        padding: 0;
+    }
+
+    * {
+        box-sizing: border-box;
+        font-family: sans-serif;
+    }
+
+    .page {
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+
+
+    @media screen and (min-width: 750px) {
+        .login {
+            border-radius: 0 40px 40px 0;
+        }
+
+        .register {
+            border-radius: 40px 0 0 40px;
+        }
+    }
+
+    .login > *, .register > * {
+        width: 100%;
+    }
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .btn_group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    button.primary {
+        all: unset;
+        background: royalblue;
+        color: white;
+        transition: .1s ease-in-out;
+        width: fit-content;
+        padding: 5px 15px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    button.primary:hover {
+        color: royalblue;
+        background: white;
+        border: 2px solid royalblue;
+    }
+
+    .hidden {
+        visibility: hidden;
+    }
+
+    .link {
+        all: unset;
+        color: royalblue;
+        cursor: pointer;
+    }
+
+
+
+    .login, .register {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        padding: 40px;
+        background-color: #f6f6f6;
+        height: 100%;
+    }
+
+    @media screen and (max-width: 750px) {
+        .page {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .empty, .hidden {
+            height: 0;
+            padding: 0;
+            margin: 0;
+        }
+    }
+
+    .error {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0;
+        background-color: white;
+        border-radius: 10px;
+    }
+
+    .error.view {
+        padding: 15px;
+    }
+
+    .error:after {
+        content: " ";
+        display: block;
+        background-color: red;
+        width: 0;
+        height: 2px;
+        transition: width 1s ease-in-out;
+    }
+
+    .error.active:after {
+        width: calc(100% - 10px);
+        transform: translateX(5px);
+        transition: width 0s ease-in-out;
+    }
+</style>
+
+</html>

@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Заявки</title>
+</head>
+<body>
+<div class="page">
+    <div class="profile">
+        <div class="profile_main">
+            <p id="name"></p>
+            <button class="secondary" id="logout" onclick="logout()">Выйти</button>
+        </div>
+        <div class="profile_meta">
+            <p id="all"></p>
+            <p id="aproved"></p>
+            <p id="denied"></p>
+        </div>
+    </div>
+
+    <div class="additional">
+        <div class="landing">
+            <img class="image" src="/static/imgs/f1.jpg" alt="" id="image">
+        </div>
+
+        <button class="new" onclick="newApplication()">
+            Новая жалоба
+        </button>
+    </div>
+
+    <div id="applications">
+
+    </div>
+</div>
+<script>
+
+    let imgIndx = 1
+    if (!localStorage.getItem("role")) {
+        location.href = "/auth"
+    }
+
+    const logout = () => {
+        fetch("/api/logout", {
+            method: "DELETE",
+        }).then(() => {
+            localStorage.clear()
+            location.href = "/auth"
+        })
+    }
+
+    setInterval(() => {
+        let img = document.getElementById("image")
+        img.classList.toggle("hidden")
+
+        if (imgIndx % 2 === 0) {
+            img.src = `/static/imgs/f${imgIndx/2}.jpg`
+        } else if (imgIndx >= 6) {
+            imgIndx = 1
+        }
+        imgIndx++
+    }, 2000)
+
+    const applicationCard = (application, role=0) => {
+        const statusToStr = (status) => {
+            switch (status) {
+                case -1:
+                    return ["Откланено", "denied"]
+                case 0:
+                    return ["Обрабатывается", "pending"]
+                case 1:
+                    return ["Принят", "approved"]
+            }
+        }
+
+        return `
+            <div class="card">
+                <div class="card_header">
+                    <div class="card_meta">
+                        <div class="card_name">${application.name}</div>
+                        <div class="card_date">${new Date(application.date).toLocaleString()}</div>
+                    </div>
+                    <div class="card_status ${statusToStr(application.status)[1]}">
+                        ${statusToStr(application.status)[0]}
+                    </div>
+                </div>
+                <div class="card_desc">
+                    ${application.description}
+                </div>
+                <div class="btn_group">
+                    ${role && application.status === 0 ? `
+                        <button class="primary" onclick="changeStatus(${application.id}, 1)">Принять</button>
+                        <button class="secondary" onclick="changeStatus(${application.id}, -1)">Отклонить</button>
+                    ` : ""}
+                    ${application.status === 0 ? `
+                        <button class="delete" onclick="deleteApplication(${application.id})">Удалить</button>
+                    ` : ""}
+                </div>
+            </div>
+        `
+    }
+
+    fetch("api/data").then(resp => resp.json()).then(body => {
+        let name = document.getElementById("name")
+        let apls = document.getElementById("applications")
+        let all = document.getElementById("all")
+        let apr = document.getElementById("aproved")
+        let den = document.getElementById("denied")
+
+        name.innerText = body.user.name
+
+        if (body.status === 404) {
+            all.innerText = "Заявок: 0"
+            apr.innerText = "Принято: 0"
+            den.innerText = "Отклонено: 0"
+        } else {
+            apr.innerText = "Принято: " + body.applications.filter(appl => appl.status === 1).length
+            den.innerText = "Отклонено: " + body.applications.filter(appl => appl.status === -1).length
+            all.innerText = "Заявок: " + body.applications.length
+            apls.innerHTML = body.applications.map(apl => applicationCard(apl, body.user.role)).join("")
+        }
+    })
+
+    const changeStatus = (id, status) => {
+        fetch("/api/data/change", {
+            method: "POST",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: id,
+                status: status
+            })
+        }).then(resp => {
+            if (resp.status === 200) {
+                location.reload()
+            }
+        })
+    }
+
+    const deleteApplication = (id) => {
+        fetch("/api/data", {
+            method: "DELETE",
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                id: id,
+            })
+        }).then(resp => {
+            if (resp.status === 200) {
+                location.reload()
+            }
+        })
+    }
+
+    const newApplication = () => {
+        location.href = "/new"
+    }
+</script>
+</body>
+
+<style>
+    * {
+        font-family: sans-serif;
+    }
+
+    body {
+        min-height: 100vh;
+    }
+
+    * {
+        font-family: sans-serif;
+    }
+
+    body {
+        background-color: #e7e7e7;
+    }
+
+    .page {
+
+    }
+
+    .profile {
+        display: flex;
+        justify-content: space-around;
+        padding: 20px;
+        background-color: coral;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+
+    .profile_meta {
+        display: flex;
+        gap: 10px;
+    }
+
+    .profile_meta > p {
+        display: flex;
+        gap: 10px;
+    }
+
+    .profile_meta > p:not(:nth-last-child(1))::after {
+        height: 100%;
+        width: 1px;
+        content: " ";
+        background-color: black;
+    }
+
+    #applications {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .card {
+        border-radius: 10px;
+        background-color: white;
+        padding: 10px;
+    }
+
+    .card_header {
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .card_meta {
+        display: flex;
+        gap: 5px;
+    }
+
+    button.primary {
+        all: unset;
+        background: royalblue;
+        color: white;
+        transition: .1s ease-in-out;
+        width: fit-content;
+        padding: 5px 15px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    button.secondary {
+        all: unset;
+        background: indianred;
+        color: white;
+        transition: .1s ease-in-out;
+        width: fit-content;
+        padding: 5px 15px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    .btn_group {
+        display: flex;
+        gap: 20px;
+        margin-top: 10px;
+    }
+
+    .card_status {
+        padding: 3px;
+        border-radius: 5px;
+    }
+
+    .card_date {
+        font-size: .8em;
+        color: #666;
+    }
+
+    .denied {
+        background-color: indianred;
+    }
+
+    .approved {
+        background-color: royalblue;
+    }
+
+    .pending {
+        background-color: aquamarine;
+    }
+
+    button.delete {
+        all: unset;
+        background: dimgray;
+        color: white;
+        transition: .1s ease-in-out;
+        width: fit-content;
+        padding: 5px 15px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    .new {
+        all: unset;
+        cursor: pointer;
+        background-color: white;
+        display: flex;
+        justify-content: center;
+        border-radius: 10px;
+        align-items: center;
+    }
+
+    .landing {
+        background-color: white;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .image {
+        opacity: 1;
+        transition: opacity .5s ease-in-out;
+        height: 20vh;
+        border-radius: 10px;
+    }
+
+    .image.hidden {
+        opacity: 0;
+    }
+
+    .additional {
+        gap: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 15px;
+    }
+
+    .additional > * {
+        height: 20vh;
+    }
+
+    @media screen and (max-width: 750px) {
+        #applications {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .additional {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .new {
+            padding: 15px 0;
+            height: auto;
+        }
+    }
+
+    .profile_main > * {
+        display: inline-block;
+    }
+</style>
+</html>
